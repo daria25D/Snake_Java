@@ -22,16 +22,17 @@ public class Snake extends JPanel implements Runnable {
     private static int highScore = 0;
     private static int speedUp = 0;
     private static int Board[][] = new int[ROWS][COLUMNS];
-    private List<Point> snake;
+    private volatile List<Point> snake;
     private Food food;
 
-    private boolean leftDir = true;
-    private boolean rightDir = false;
-    private boolean upDir = false;
-    private boolean downDir = false;
+    private volatile boolean leftDir = true;
+    private volatile boolean rightDir = false;
+    private volatile boolean upDir = false;
+    private volatile boolean downDir = false;
 
     private static boolean addWalls = false;
 
+    private volatile boolean hasMoved = false;
     private volatile boolean gameOver = true;
     private volatile boolean firstGame = true;
     private volatile boolean inMenuScreen = true;
@@ -59,27 +60,35 @@ public class Snake extends JPanel implements Runnable {
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
                 if ((key == KeyEvent.VK_LEFT || key == KeyEvent.VK_A) && !inMenuScreen && !rightDir) {
-                    leftDir = true;
-                    upDir = false;
-                    downDir = false;
+                    while (!hasMoved && !gameOver) {
+                        leftDir = true;
+                        upDir = false;
+                        downDir = false;
+                    }
 //                    System.out.println("left");
                 }
                 if ((key == KeyEvent.VK_RIGHT || key == KeyEvent.VK_D) && !inMenuScreen && !leftDir) {
-                    rightDir = true;
-                    upDir = false;
-                    downDir = false;
+                    while (!hasMoved && !gameOver){
+                        rightDir = true;
+                        upDir = false;
+                        downDir = false;
+                    }
 //                    System.out.println("right");
                 }
                 if ((key == KeyEvent.VK_UP || key == KeyEvent.VK_W) && !inMenuScreen && !downDir) {
-                    upDir = true;
-                    leftDir = false;
-                    rightDir = false;
+                    while (!hasMoved && !gameOver) {
+                        upDir = true;
+                        leftDir = false;
+                        rightDir = false;
+                    }
 //                    System.out.println("up");
                 }
                 if ((key == KeyEvent.VK_DOWN || key == KeyEvent.VK_S) && !inMenuScreen && !upDir) {
-                    downDir = true;
-                    leftDir = false;
-                    rightDir = false;
+                    while (!hasMoved && !gameOver) {
+                        downDir = true;
+                        leftDir = false;
+                        rightDir = false;
+                    }
 //                    System.out.println("down");
                 }
                 if (key == KeyEvent.VK_SPACE) {
@@ -185,13 +194,19 @@ public class Snake extends JPanel implements Runnable {
 
     private Point nextPointInDir(Point p) {
         Point next = new Point(p);
-        if (leftDir)
+        if (leftDir) {
             next.x--;
-        if (rightDir)
+            return next;
+        }
+        else if (rightDir) {
             next.x++;
-        if (upDir)
+            return next;
+        }
+        else if (upDir) {
             next.y--;
-        if (downDir)
+            return next;
+        }
+        else if (downDir)
             next.y++;
         return next;
     }
@@ -199,36 +214,43 @@ public class Snake extends JPanel implements Runnable {
     private boolean collision() {
         Point head = snake.get(0);
         Point next = nextPointInDir(head);
-        for (Point p : snake) {
-            if (Board[next.y][next.x] == WALL) {
-//                System.out.println("Wall");
-                return true;
-            }
-            if (p.x == next.x && p.y == next.y) {
-//                System.out.println("Snake");
-                return true;
-            }
+        if (snake.contains(next)) {
+//            System.out.println(head);
+//            System.out.println(next);
+//            System.out.println("Snake");
+            return true;
+        }
+        if (Board[next.x][next.y] == WALL) {
+//            System.out.println("Wall");
+            return true;
         }
         return false;
     }
 
-    private void moveSnake() {
+    private int moveSnake() {
         for (int i = snake.size() - 1; i > 0; i--) {
             Point p1 = snake.get(i - 1);
             Point p2 = snake.get(i);
-            p2.x = p1.x;
-            p2.y = p1.y;
+            p2.move(p1.x, p1.y);
         }
         Point head = snake.get(0);
-        if (leftDir)
+        if (leftDir) {
             head.x--;
-        if (rightDir)
+            return 1;
+        }
+        else if (rightDir) {
             head.x++;
-        if (upDir)
+            return 1;
+        }
+        else if (upDir) {
             head.y--;
-        if (downDir)
+            return 1;
+        }
+        else if (downDir) {
             head.y++;
-
+            return 1;
+        }
+        return 0;
     }
 
     private boolean eatFood() {
@@ -251,12 +273,18 @@ public class Snake extends JPanel implements Runnable {
     @Override
     public void run() {
         while (Thread.currentThread() == gameThread) {
+            hasMoved = false;
             try {
-                Thread.sleep(Math.max(75 - score - speedUp, 20));
+                Thread.sleep(Math.max(100 - score - speedUp, 20));
             } catch (InterruptedException e) {
                 return;
             }
             if (collision()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    return;
+                }
                 gameOver();
             } else {
                 if (eatFood()) {
@@ -265,6 +293,7 @@ public class Snake extends JPanel implements Runnable {
                     addFood();
                 }
                 moveSnake();
+                hasMoved = true;
             }
             repaint();
         }
@@ -274,7 +303,7 @@ public class Snake extends JPanel implements Runnable {
         g.setColor(Color.lightGray);
         for (int i = 0; i < ROWS; i++)
             for (int j = 0; j < COLUMNS; j++)
-                if (Board[i][j] == WALL)
+                if (Board[j][i] == WALL)
                     g.fillRect(j * DOT_SIZE, i * DOT_SIZE, DOT_SIZE, DOT_SIZE);
     }
 
