@@ -10,8 +10,8 @@ import java.util.Random;
 
 
 public class Snake extends JPanel implements Runnable {
-    private final int ROWS = 60;
-    private final int COLUMNS = 60;
+    private static final int ROWS = 60;
+    private static final int COLUMNS = 60;
     private final int DOT_SIZE = 10;
     private final int WALL = -1;
     private final int INITIAL_SIZE = 4;
@@ -21,7 +21,7 @@ public class Snake extends JPanel implements Runnable {
     private int score;
     private static int highScore = 0;
     private static int speedUp = 0;
-    private int Board[][] = new int[ROWS][COLUMNS];
+    private static int Board[][] = new int[ROWS][COLUMNS];
     private List<Point> snake;
     private Food food;
 
@@ -101,6 +101,10 @@ public class Snake extends JPanel implements Runnable {
     private void startNewGame() {
         gameOver = false;
         firstGame = false;
+        leftDir = true;
+        rightDir = false;
+        upDir = false;
+        downDir = false;
         stop();
         initBoard();
         food = new Food();
@@ -109,7 +113,7 @@ public class Snake extends JPanel implements Runnable {
         score = 0;
         snake = new ArrayList<>();
         for (int i = 0; i < INITIAL_SIZE; i++) {
-            snake.add(new Point(COLUMNS / 2 + i, ROWS / 2 + i));
+            snake.add(new Point(COLUMNS / 2 + i, ROWS / 2));
         }
         addFood();
         (gameThread = new Thread(this)).start();
